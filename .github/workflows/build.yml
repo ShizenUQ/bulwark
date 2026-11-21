@@ -14,7 +14,7 @@ jobs:
       - name: Unpack project
         run: |
           mkdir project
-          unzip -o LineEngine3D.zip -d project
+          unzip -o LineEngine3D.1.zip -d project
           ROOT=$(dirname "$(find project -maxdepth 3 -name settings.gradle.kts | head -n 1)")
           echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
 
