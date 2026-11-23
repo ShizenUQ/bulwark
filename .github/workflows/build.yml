@@ -1,36 +1,51 @@
 name: Build Shizumi
+
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, master]
+
+env:
+  # CHANGE THIS to the zip you uploaded, for each new version
+  ZIP_NAME: shizumi-v0.1.zip
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Get the repo
+        uses: actions/checkout@v4
 
-      - name: Unzip the newest shizumi-v0.1.zip
+      - name: Unzip the app
         run: |
-          z=$(ls shizumi-v*.zip 2>/dev/null | sort -V | tail -1 || true)
-          if [ -n "$z" ]; then rm -rf shizumi; unzip -q "$z"; fi
-          ls shizumi
+          echo "Files in repo:"
+          ls -la
+          if [ ! -f "$ZIP_NAME" ]; then
+            echo "ERROR: $ZIP_NAME is not in the repo. Upload it to the repo root, or change ZIP_NAME at the top of this file."
+            exit 1
+          fi
+          rm -rf shizumi
+          unzip -q "$ZIP_NAME"
+          echo "After unzip:"
+          ls -la shizumi
 
-      - uses: actions/setup-java@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
-
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
 
-      - name: Build
-        run: cd shizumi && gradle assembleDebug --no-daemon
+      - name: Build the APK
+        working-directory: shizumi
+        run: gradle assembleDebug --no-daemon --stacktrace
 
-      - uses: actions/upload-artifact@v4
+      - name: Save the APK
+        uses: actions/upload-artifact@v4
         with:
-          name: Shizumi-debug-apk
+          name: Shizumi-apk
           path: shizumi/app/build/outputs/apk/debug/*.apk
