@@ -1,9 +1,8 @@
-name: Build Debug APK
-
+name: Build Shizumi
 on:
-  push:
-    branches: [ main, master ]
   workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
   build:
@@ -11,36 +10,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unpack project
+      - name: Unzip the newest shizumi zip
         run: |
-          mkdir project
-          unzip -o LineEngine3D.1.zip -d project
-          ROOT=$(dirname "$(find project -maxdepth 3 -name settings.gradle.kts | head -n 1)")
-          echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
+          z=$(ls shizumi-v*.zip 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$z" ]; then rm -rf shizumi; unzip -q "$z"; fi
+          ls shizumi
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.10'
+          gradle-version: 8.9
 
-      - name: Build debug APK
-        working-directory: ${{ env.PROJECT_ROOT }}
-        run: |
-          gradle wrapper --gradle-version 8.10
-          set +e
-          ./gradlew assembleDebug --stacktrace > build.log 2>&1
-          STATUS=$?
-          echo "=== COMPILE ERRORS ==="
-          grep -E "^e: |What went wrong|error:|Execution failed|Unresolved|Could not" -A3 build.log | head -150
-          exit $STATUS
+      - name: Build
+        run: cd shizumi && gradle assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
-        if: success()
         with:
-          name: app-debug
-          path: ${{ env.PROJECT_ROOT }}/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          name: Shizumi-debug-apk
+          path: shizumi/app/build/outputs/apk/debug/*.apk
