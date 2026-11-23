@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip the newest shizumi zip
+      - name: Unzip the newest shizumi-v0.1.zip
         run: |
           z=$(ls shizumi-v*.zip 2>/dev/null | sort -V | tail -1 || true)
           if [ -n "$z" ]; then rm -rf shizumi; unzip -q "$z"; fi
