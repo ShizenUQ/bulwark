@@ -1,0 +1,66 @@
+name: Build CyberFold 32 (32-bit)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      OAUTH_API_KEY: ${{ secrets.OAUTH_API_KEY }}
+      CURSE_API_KEY: ${{ secrets.CURSE_API_KEY }}
+    steps:
+      - name: Get this repository
+        uses: actions/checkout@v7
+        with:
+          path: recipe
+
+      - name: Unzip CyberFold32.zip
+        run: |
+          if [ ! -f recipe/CyberFold32.zip ]; then
+            echo "::error::CyberFold32.zip not found at the top level of the repository."
+            exit 1
+          fi
+          unzip -o recipe/CyberFold32.zip -d "$RUNNER_TEMP/cyberfold"
+          if [ ! -f "$RUNNER_TEMP/cyberfold/CyberFoldTheme.java" ] || [ ! -f "$RUNNER_TEMP/cyberfold/patch.py" ]; then
+            echo "::error::This is an incomplete or outdated CyberFold32.zip. Re-export and upload the latest CyberFold32.zip."
+            exit 1
+          fi
+
+      - name: Get FCL 1.3.4.9 release source
+        uses: actions/checkout@v7
+        with:
+          repository: FCL-Team/FoldCraftLauncher
+          ref: bc0f903de2721b722742a4a1d72e5d77b8afc1a8
+          fetch-depth: 0
+          submodules: recursive
+          path: src
+
+      - name: Apply CyberFold 32 skin and 32-bit presets
+        working-directory: src
+        run: python3 "$RUNNER_TEMP/cyberfold/patch.py"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android NDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.0.12077973" > /dev/null || true
+
+      - name: Build 32-bit APK
+        working-directory: src
+        run: |
+          chmod +x gradlew
+          ./gradlew assemblefordebug -Darch=arm --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: CyberFold32-32bit-apk
+          path: src/FCL/build/outputs/apk/*/*.apk
+          if-no-files-found: error
